@@ -1,0 +1,50 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model BudgetProfile {
+  id                String   @id @default(cuid())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  monthlyIncome     Float
+  recurringIncome   Float
+  savingsGoal       Float
+  fixedExpenses     Float
+  variableExpenses  Float
+  debtRepayments    Float
+
+  transactions      Transaction[]
+  chartConfigs      ChartConfig[]
+}
+
+model Transaction {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+
+  budgetProfileId String
+  date            DateTime
+  amount          Float
+  type            String
+  category        String
+  note            String?
+
+  budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+}
+
+model ChartConfig {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  budgetProfileId String
+  chartKey        String
+  title           String
+  configJson      String
+
+  budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+}
