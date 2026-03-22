@@ -947,15 +947,6 @@ export default function DashboardPage() {
                                 </div>
                             ))}
                         </div>
-
-                        <div className="mt-6 rounded-2xl border border-red-900/40 bg-black/20 p-4">
-                            <p className="text-sm font-medium text-white">Why this is shippable</p>
-                            <p className="mt-2 text-sm leading-6 text-red-100/70">
-                                This dashboard now does more than show charts. It creates a clear
-                                financial story, highlights risk areas, and gives the AI a visible
-                                purpose as an explanation and recommendation layer.
-                            </p>
-                        </div>
                     </Panel>
                 </section>
             </div>
