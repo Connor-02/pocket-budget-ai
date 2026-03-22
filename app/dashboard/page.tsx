@@ -435,7 +435,7 @@ export default function DashboardPage() {
 
     if (loading) {
         return (
-            <main className="min-h-screen bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-6 py-10 text-white">
+            <main className="min-h-screen bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-4 py-8 text-white sm:px-6 sm:py-10">
                 <div className="mx-auto max-w-7xl animate-pulse">
                     <div className="h-5 w-36 rounded bg-white/10" />
                     <div className="mt-4 h-12 w-80 rounded bg-white/10" />
@@ -468,7 +468,7 @@ export default function DashboardPage() {
 
     if (error || !data) {
         return (
-            <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-6 text-white">
+            <main className="flex min-h-screen items-center justify-center bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-4 text-white sm:px-6">
                 <Panel className="max-w-md p-8 text-center">
                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-300/60">
                         Dashboard
@@ -498,7 +498,7 @@ export default function DashboardPage() {
         metrics.savingsGap >= 0 ? "purple" : "red";
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-6 py-10 text-white">
+        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-4 py-8 text-white sm:px-6 sm:py-10">
             <div className="absolute inset-0">
                 <div className="absolute left-[-140px] top-[-120px] h-[320px] w-[320px] rounded-full bg-red-900/15 blur-3xl" />
                 <div className="absolute bottom-[-140px] right-[-80px] h-[340px] w-[340px] rounded-full bg-red-700/10 blur-3xl" />
@@ -506,26 +506,26 @@ export default function DashboardPage() {
 
             <div className="relative mx-auto max-w-7xl">
                 <div className="mb-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-300/65">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-red-300/65 sm:tracking-[0.3em]">
                         Pocket Budget AI
                     </p>
-                    <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+                    <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                         Financial Dashboard
                     </h1>
-                    <p className="mt-3 max-w-2xl text-base leading-7 text-red-100/70">
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-red-100/70 sm:text-base sm:leading-7">
                         A smarter view of your budget, margins, and savings position — designed
                         to help you understand what is happening and what to do next.
                     </p>
                 </div>
 
                 <section className="grid gap-6 xl:grid-cols-3">
-                    <Panel className="p-6 xl:col-span-2">
+                    <Panel className="p-5 sm:p-6 xl:col-span-2">
                         <div className="flex flex-col gap-6 lg:flex-row lg:items-start lg:justify-between">
                             <div className="max-w-2xl">
                                 <p className="text-sm font-medium text-red-100/60">
                                     Monthly Financial Health
                                 </p>
-                                <h2 className="mt-3 text-3xl font-bold tracking-tight md:text-4xl">
+                                <h2 className="mt-3 text-2xl font-bold tracking-tight sm:text-3xl md:text-4xl">
                                     {metrics.margin >= 0 ? "You’re on track" : "You need to tighten spending"}
                                 </h2>
                                 <p className="mt-3 text-red-100/70">
@@ -553,11 +553,11 @@ export default function DashboardPage() {
                                 </div>
                             </div>
 
-                            <div className="grid min-w-[240px] gap-4">
+                            <div className="grid w-full gap-4 sm:max-w-[260px] lg:min-w-[240px]">
                                 <div className="rounded-2xl border border-red-900/40 bg-black/20 p-5">
                                     <p className="text-sm text-red-100/55">Net left this month</p>
                                     <p
-                                        className={`mt-2 text-4xl font-bold ${metrics.margin >= 0 ? "text-emerald-300" : "text-red-300"
+                                        className={`mt-2 text-3xl font-bold sm:text-4xl ${metrics.margin >= 0 ? "text-emerald-300" : "text-red-300"
                                             }`}
                                     >
                                         {formatCurrency(metrics.margin)}
@@ -567,7 +567,7 @@ export default function DashboardPage() {
                                 <div className="rounded-2xl border border-red-900/40 bg-black/20 p-5">
                                     <p className="text-sm text-red-100/55">Health score</p>
                                     <div className="mt-2 flex items-end justify-between">
-                                        <p className={`text-4xl font-bold ${getHealthAccent(healthScore)}`}>
+                                        <p className={`text-3xl font-bold sm:text-4xl ${getHealthAccent(healthScore)}`}>
                                             {healthScore}
                                         </p>
                                         <p className={`text-sm font-medium ${getHealthAccent(healthScore)}`}>
@@ -579,7 +579,7 @@ export default function DashboardPage() {
                         </div>
                     </Panel>
 
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Ask Budget AI"
                             description="Explain your dashboard, compare categories, or surface savings opportunities."
@@ -659,13 +659,13 @@ export default function DashboardPage() {
                 </section>
 
                 <section className="mt-6 grid gap-6 xl:grid-cols-3">
-                    <Panel className="p-6 xl:col-span-2">
+                    <Panel className="p-5 sm:p-6 xl:col-span-2">
                         <SectionTitle
                             title="Income vs Expenses"
                             description="A quick comparison of what comes in versus what goes out this month."
                         />
 
-                        <div className="mt-4 h-[320px] w-full">
+                        <div className="mt-4 h-[260px] w-full sm:h-[320px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <BarChart data={incomeVsExpenses} barGap={24}>
                                     <CartesianGrid
@@ -717,13 +717,13 @@ export default function DashboardPage() {
                         </div>
                     </Panel>
 
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Savings Rate"
                             description="How much of your income remains after expenses."
                         />
 
-                        <div className="mt-4 h-[320px] w-full">
+                        <div className="mt-4 h-[260px] w-full sm:h-[320px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <RadialBarChart
                                     cx="50%"
@@ -774,13 +774,13 @@ export default function DashboardPage() {
                 </section>
 
                 <section className="mt-6 grid gap-6 xl:grid-cols-2">
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Spending Breakdown"
                             description="Your current expense mix by category."
                         />
 
-                        <div className="mt-4 h-[320px] w-full">
+                        <div className="mt-4 h-[260px] w-full sm:h-[320px]">
                             <ResponsiveContainer width="100%" height="100%">
                                 <PieChart>
                                     <Pie
@@ -822,7 +822,7 @@ export default function DashboardPage() {
                         </div>
                     </Panel>
 
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Budget Allocation"
                             description="How your income is currently distributed."
@@ -854,7 +854,7 @@ export default function DashboardPage() {
                 </section>
 
                 <section className="mt-6 grid gap-6 xl:grid-cols-2">
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Quick Insights"
                             description="Plain-English takeaways from your current budget."
@@ -926,7 +926,7 @@ export default function DashboardPage() {
                         </div>
                     </Panel>
 
-                    <Panel className="p-6">
+                    <Panel className="p-5 sm:p-6">
                         <SectionTitle
                             title="Focus Areas"
                             description="The highest-value areas to review next."

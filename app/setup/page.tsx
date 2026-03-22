@@ -113,7 +113,7 @@ export default function SetupPage() {
     }
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#140304] to-[#2a0608] px-4 py-10 text-white">
+        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#140304] to-[#2a0608] px-4 py-8 text-white sm:py-10">
             <div className="absolute inset-0">
                 <div className="absolute left-[-120px] top-[-120px] h-[280px] w-[280px] rounded-full bg-red-900/20 blur-3xl" />
                 <div className="absolute bottom-[-120px] right-[-80px] h-[300px] w-[300px] rounded-full bg-red-700/10 blur-3xl" />
@@ -122,19 +122,19 @@ export default function SetupPage() {
 
             <div className="relative mx-auto max-w-3xl">
                 <div className="mb-8 text-center">
-                    <p className="text-sm uppercase tracking-[0.3em] text-red-300/60">
+                    <p className="text-xs uppercase tracking-[0.22em] text-red-300/60 sm:text-sm sm:tracking-[0.3em]">
                         Pocket Budget AI
                     </p>
-                    <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+                    <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                         Set up your budget
                     </h1>
-                    <p className="mx-auto mt-4 max-w-2xl text-base leading-7 text-red-100/70">
+                    <p className="mx-auto mt-4 max-w-2xl text-sm leading-6 text-red-100/70 sm:text-base sm:leading-7">
                         Add your key measurables to generate a personalised dashboard with
                         margins, spending insights, and smart budget visualisations.
                     </p>
                 </div>
 
-                <div className="rounded-[32px] border border-red-950/60 bg-white/5 p-6 shadow-[0_0_50px_rgba(127,29,29,0.18)] backdrop-blur-xl md:p-8">
+                <div className="rounded-[32px] border border-red-950/60 bg-white/5 p-5 shadow-[0_0_50px_rgba(127,29,29,0.18)] backdrop-blur-xl sm:p-6 md:p-8">
                     <div className="mb-8 grid gap-4 md:grid-cols-3">
                         <div className="rounded-2xl border border-red-950/50 bg-black/20 p-4">
                             <p className="text-xs uppercase tracking-[0.2em] text-red-200/55">

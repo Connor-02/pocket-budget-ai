@@ -358,7 +358,7 @@ export default function TransactionsPage() {
     }, [transactions]);
 
     return (
-        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-6 py-10 text-white">
+        <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-4 py-8 text-white sm:px-6 sm:py-10">
             <div className="absolute inset-0">
                 <div className="absolute left-[-140px] top-[-120px] h-[320px] w-[320px] rounded-full bg-red-900/15 blur-3xl" />
                 <div className="absolute bottom-[-140px] right-[-80px] h-[340px] w-[340px] rounded-full bg-red-700/10 blur-3xl" />
@@ -366,20 +366,20 @@ export default function TransactionsPage() {
 
             <div className="relative mx-auto max-w-7xl">
                 <div className="mb-8">
-                    <p className="text-xs font-semibold uppercase tracking-[0.3em] text-red-300/65">
+                    <p className="text-xs font-semibold uppercase tracking-[0.22em] text-red-300/65 sm:tracking-[0.3em]">
                         Pocket Budget AI
                     </p>
-                    <h1 className="mt-3 text-4xl font-bold tracking-tight md:text-5xl">
+                    <h1 className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl md:text-5xl">
                         Transactions
                     </h1>
-                    <p className="mt-3 max-w-2xl text-base leading-7 text-red-100/70">
+                    <p className="mt-3 max-w-2xl text-sm leading-6 text-red-100/70 sm:text-base sm:leading-7">
                         Add real income and expense entries so your dashboard becomes more
                         accurate, more useful, and more intelligent.
                     </p>
                 </div>
 
                 <section className="grid gap-6 xl:grid-cols-3">
-                    <Panel className="p-6 xl:col-span-1">
+                    <Panel className="p-5 sm:p-6 xl:col-span-1">
                         <div className="mb-5">
                             <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-300/60">
                                 Add Transaction
@@ -414,7 +414,7 @@ export default function TransactionsPage() {
                                 className="mt-4 w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white placeholder:text-red-100/35 outline-none transition focus:border-red-500/70 focus:ring-4 focus:ring-red-900/25"
                             />
 
-                            <div className="mt-3 grid grid-cols-2 gap-3">
+                            <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                                 <button
                                     type="button"
                                     onClick={toggleListening}
@@ -597,7 +597,7 @@ export default function TransactionsPage() {
                         </section>
 
                         <section className="grid gap-6 lg:grid-cols-2">
-                            <Panel className="p-6">
+                            <Panel className="p-5 sm:p-6">
                                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-300/60">
                                     Top Expense Categories
                                 </p>
@@ -638,7 +638,7 @@ export default function TransactionsPage() {
                                 </div>
                             </Panel>
 
-                            <Panel className="p-6">
+                            <Panel className="p-5 sm:p-6">
                                 <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-300/60">
                                     Transaction Tips
                                 </p>
@@ -669,8 +669,8 @@ export default function TransactionsPage() {
                             </Panel>
                         </section>
 
-                        <Panel className="p-6">
-                            <div className="mb-5 flex items-center justify-between gap-4">
+                        <Panel className="p-5 sm:p-6">
+                            <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                 <div>
                                     <p className="text-xs font-semibold uppercase tracking-[0.24em] text-red-300/60">
                                         Recent Activity
@@ -696,15 +696,8 @@ export default function TransactionsPage() {
                                     No transactions yet. Add your first one using the form.
                                 </p>
                             ) : (
-                                <div className="overflow-hidden rounded-2xl border border-red-900/40">
-                                    <div className="grid grid-cols-[1.1fr_0.8fr_0.8fr_1fr] bg-black/25 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-red-200/55">
-                                        <div>Transaction</div>
-                                        <div>Date</div>
-                                        <div>Category</div>
-                                        <div className="text-right">Amount</div>
-                                    </div>
-
-                                    <div className="divide-y divide-red-950/50">
+                                <>
+                                    <div className="space-y-3 md:hidden">
                                         {transactions.map((transaction) => {
                                             const isIncome =
                                                 transaction.type.toLowerCase() === "income";
@@ -712,42 +705,92 @@ export default function TransactionsPage() {
                                             return (
                                                 <div
                                                     key={transaction.id}
-                                                    className="grid grid-cols-[1.1fr_0.8fr_0.8fr_1fr] items-center px-4 py-4"
+                                                    className="rounded-2xl border border-red-900/40 bg-black/20 p-4"
                                                 >
-                                                    <div className="min-w-0">
-                                                        <p className="truncate text-sm font-medium text-white">
-                                                            {transaction.note?.trim() || transaction.type}
-                                                        </p>
-                                                        <p
-                                                            className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${isIncome
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-medium text-white">
+                                                                {transaction.note?.trim() || transaction.type}
+                                                            </p>
+                                                            <p
+                                                                className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${isIncome
                                                                     ? "bg-emerald-500/10 text-emerald-300"
                                                                     : "bg-red-500/10 text-red-300"
+                                                                    }`}
+                                                            >
+                                                                {transaction.type}
+                                                            </p>
+                                                        </div>
+                                                        <p
+                                                            className={`text-sm font-semibold ${isIncome ? "text-emerald-300" : "text-white"
                                                                 }`}
                                                         >
-                                                            {transaction.type}
+                                                            {isIncome ? "+" : "-"}
+                                                            {formatCurrency(Number(transaction.amount))}
                                                         </p>
                                                     </div>
-
-                                                    <div className="text-sm text-red-100/70">
-                                                        {new Date(transaction.date).toLocaleDateString("en-AU")}
-                                                    </div>
-
-                                                    <div className="text-sm text-red-100/80">
-                                                        {transaction.category}
-                                                    </div>
-
-                                                    <div
-                                                        className={`text-right text-sm font-semibold ${isIncome ? "text-emerald-300" : "text-white"
-                                                            }`}
-                                                    >
-                                                        {isIncome ? "+" : "-"}
-                                                        {formatCurrency(Number(transaction.amount))}
+                                                    <div className="mt-3 grid grid-cols-2 gap-3 text-xs text-red-100/70">
+                                                        <p>{new Date(transaction.date).toLocaleDateString("en-AU")}</p>
+                                                        <p className="text-right text-red-100/80">{transaction.category}</p>
                                                     </div>
                                                 </div>
                                             );
                                         })}
                                     </div>
-                                </div>
+
+                                    <div className="hidden overflow-hidden rounded-2xl border border-red-900/40 md:block">
+                                        <div className="grid grid-cols-[1.1fr_0.8fr_0.8fr_1fr] bg-black/25 px-4 py-3 text-xs font-semibold uppercase tracking-[0.18em] text-red-200/55">
+                                            <div>Transaction</div>
+                                            <div>Date</div>
+                                            <div>Category</div>
+                                            <div className="text-right">Amount</div>
+                                        </div>
+
+                                        <div className="divide-y divide-red-950/50">
+                                            {transactions.map((transaction) => {
+                                                const isIncome =
+                                                    transaction.type.toLowerCase() === "income";
+
+                                                return (
+                                                    <div
+                                                        key={transaction.id}
+                                                        className="grid grid-cols-[1.1fr_0.8fr_0.8fr_1fr] items-center px-4 py-4"
+                                                    >
+                                                        <div className="min-w-0">
+                                                            <p className="truncate text-sm font-medium text-white">
+                                                                {transaction.note?.trim() || transaction.type}
+                                                            </p>
+                                                            <p
+                                                                className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${isIncome
+                                                                    ? "bg-emerald-500/10 text-emerald-300"
+                                                                    : "bg-red-500/10 text-red-300"
+                                                                    }`}
+                                                            >
+                                                                {transaction.type}
+                                                            </p>
+                                                        </div>
+
+                                                        <div className="text-sm text-red-100/70">
+                                                            {new Date(transaction.date).toLocaleDateString("en-AU")}
+                                                        </div>
+
+                                                        <div className="text-sm text-red-100/80">
+                                                            {transaction.category}
+                                                        </div>
+
+                                                        <div
+                                                            className={`text-right text-sm font-semibold ${isIncome ? "text-emerald-300" : "text-white"
+                                                                }`}
+                                                        >
+                                                            {isIncome ? "+" : "-"}
+                                                            {formatCurrency(Number(transaction.amount))}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    </div>
+                                </>
                             )}
                         </Panel>
                     </div>
