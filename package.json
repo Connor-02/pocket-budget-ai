@@ -5,6 +5,8 @@
   "scripts": {
     "dev": "next dev --webpack",
     "build": "next build --webpack",
+    "build:vercel": "node scripts/migrate-deploy-retry.mjs && npm run build",
+    "migrate:deploy": "prisma migrate deploy",
     "start": "next start",
     "lint": "eslint",
     "postinstall": "prisma generate"
