@@ -246,6 +246,7 @@ export default function DashboardPage() {
 
                 const res = await fetch("/api/dashboard", {
                     method: "GET",
+                    cache: "no-store",
                 });
 
                 const json = await res.json();

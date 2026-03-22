@@ -1,6 +1,5 @@
 import "server-only";
 import { prisma } from "@/lib/prisma";
-import { calculateMetrics } from "@/lib/budget";
 import type { DashboardData } from "@/lib/dashboard-types";
 
 export async function getLatestBudgetDashboard(): Promise<DashboardData | null> {
@@ -50,6 +49,15 @@ export async function getLatestBudgetDashboard(): Promise<DashboardData | null> 
 
     const trackedIncome = Number(incomeTotals._sum.amount ?? 0);
     const trackedExpenses = Number(expenseTotals._sum.amount ?? 0);
+    const hasTrackedTransactions = trackedIncome > 0 || trackedExpenses > 0;
+    const totalIncome = hasTrackedTransactions
+        ? trackedIncome
+        : profile.monthlyIncome + profile.recurringIncome;
+    const totalExpenses = hasTrackedTransactions
+        ? trackedExpenses
+        : profile.fixedExpenses + profile.variableExpenses + profile.debtRepayments;
+    const margin = totalIncome - totalExpenses;
+    const savingsGap = margin - profile.savingsGoal;
     const expenseCount = expenseTotals._count._all;
     const byCategory = groupedExpenses.map((entry) => ({
         name: entry.category?.trim() || "Other",
@@ -67,7 +75,12 @@ export async function getLatestBudgetDashboard(): Promise<DashboardData | null> 
             debtRepayments: profile.debtRepayments,
             transactions: [],
         },
-        metrics: calculateMetrics(profile),
+        metrics: {
+            totalIncome,
+            totalExpenses,
+            margin,
+            savingsGap,
+        },
         transactionMetrics: {
             trackedIncome,
             trackedExpenses,
