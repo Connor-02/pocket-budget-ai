@@ -1,4 +1,5 @@
 import "server-only";
+import type { Transaction } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { calculateMetrics } from "@/lib/budget";
 import { summarizeTransactions } from "@/lib/transactions";
@@ -18,7 +19,7 @@ export async function getLatestBudgetDashboard(): Promise<DashboardData | null> 
         return null;
     }
 
-    const transactions: TransactionRecord[] = profile.transactions.map((transaction) => ({
+    const transactions: TransactionRecord[] = profile.transactions.map((transaction: Transaction) => ({
         id: transaction.id,
         date: transaction.date.toISOString(),
         amount: transaction.amount,
