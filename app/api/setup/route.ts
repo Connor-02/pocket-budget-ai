@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import type { Prisma } from "@prisma/client";
 import { prisma } from "@/lib/prisma";
 import { getLatestBudgetDashboard } from "@/lib/dashboard-data";
 import { budgetProfileSchema, formatZodError } from "@/lib/transactions";
@@ -72,24 +71,20 @@ export async function POST(req: Request) {
             );
         }
 
-        const profile = await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            const createdProfile = await tx.budgetProfile.create({
-                data: parsed.data,
-            });
-
-            const setupTransactions = getSetupTransactions(
-                createdProfile.id,
-                parsed.data
-            );
-
-            if (setupTransactions.length) {
-                await tx.transaction.createMany({
-                    data: setupTransactions,
-                });
-            }
-
-            return createdProfile;
+        const profile = await prisma.budgetProfile.create({
+            data: parsed.data,
         });
+
+        const setupTransactions = getSetupTransactions(
+            profile.id,
+            parsed.data
+        );
+
+        if (setupTransactions.length) {
+            await prisma.transaction.createMany({
+                data: setupTransactions,
+            });
+        }
 
         const dashboard = await getLatestBudgetDashboard();
         return NextResponse.json(dashboard ?? profile);
@@ -124,26 +119,27 @@ export async function PUT(req: Request) {
             return NextResponse.json({ error: "No budget profile found" }, { status: 404 });
         }
 
-        await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-            await tx.budgetProfile.update({
+        const setupTransactions = getSetupTransactions(profile.id, parsed.data);
+
+        await prisma.$transaction([
+            prisma.budgetProfile.update({
                 where: { id: profile.id },
                 data: parsed.data,
-            });
-
-            await tx.transaction.deleteMany({
+            }),
+            prisma.transaction.deleteMany({
                 where: {
                     budgetProfileId: profile.id,
                     note: AUTO_SETUP_NOTE,
                 },
-            });
-
-            const setupTransactions = getSetupTransactions(profile.id, parsed.data);
-            if (setupTransactions.length) {
-                await tx.transaction.createMany({
-                    data: setupTransactions,
-                });
-            }
-        });
+            }),
+            ...(setupTransactions.length
+                ? [
+                    prisma.transaction.createMany({
+                        data: setupTransactions,
+                    }),
+                ]
+                : []),
+        ]);
 
         const dashboard = await getLatestBudgetDashboard();
         return NextResponse.json(dashboard);
