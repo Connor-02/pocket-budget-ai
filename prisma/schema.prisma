@@ -20,6 +20,8 @@ model BudgetProfile {
 
   transactions      Transaction[]
   chartConfigs      ChartConfig[]
+
+  @@index([createdAt])
 }
 
 model Transaction {
@@ -34,6 +36,9 @@ model Transaction {
   note            String?
 
   budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+
+  @@index([budgetProfileId, date(sort: Desc), createdAt(sort: Desc)])
+  @@index([budgetProfileId, type, category])
 }
 
 model ChartConfig {
@@ -47,4 +52,6 @@ model ChartConfig {
   configJson      String
 
   budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+
+  @@index([budgetProfileId, createdAt])
 }

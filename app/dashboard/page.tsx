@@ -47,6 +47,12 @@ type Metrics = {
 type DashboardResponse = {
     profile: BudgetProfile;
     metrics: Metrics;
+    transactionMetrics?: {
+        byCategory?: Array<{
+            name: string;
+            value: number;
+        }>;
+    };
 };
 
 const PIE_COLORS = ["#ef4444", "#f97316", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b"];
@@ -228,12 +234,18 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadDashboard() {
             try {
-                setLoading(true);
+                const cached = sessionStorage.getItem("dashboard_cache_v1");
+                if (cached) {
+                    const parsed = JSON.parse(cached) as DashboardResponse;
+                    setData(parsed);
+                    setLoading(false);
+                } else {
+                    setLoading(true);
+                }
                 setError("");
 
                 const res = await fetch("/api/dashboard", {
                     method: "GET",
-                    cache: "no-store",
                 });
 
                 const json = await res.json();
@@ -243,6 +255,7 @@ export default function DashboardPage() {
                 }
 
                 setData(json);
+                sessionStorage.setItem("dashboard_cache_v1", JSON.stringify(json));
             } catch (err) {
                 console.error(err);
                 setError("Could not load dashboard data.");
@@ -255,6 +268,10 @@ export default function DashboardPage() {
     }, []);
 
     const spendingByCategory = useMemo(() => {
+        if (data?.transactionMetrics?.byCategory?.length) {
+            return data.transactionMetrics.byCategory;
+        }
+
         if (!data?.profile?.transactions?.length) {
             return [
                 { name: "Fixed", value: data?.profile.fixedExpenses ?? 0 },
