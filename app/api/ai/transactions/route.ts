@@ -8,6 +8,16 @@ import { transactionCreateSchema } from "@/lib/transactions";
 const requestSchema = z.object({
     input: z.string().trim().min(1).max(500),
     timezone: z.string().trim().min(1).max(100).optional(),
+    confirm: z.boolean().optional(),
+    transactions: z.array(
+        z.object({
+            amount: z.coerce.number().positive(),
+            type: z.enum(["income", "expense"]),
+            category: z.string().trim().min(1).max(60),
+            note: z.string().trim().max(240).optional().default(""),
+            date: z.string().trim().optional(),
+        })
+    ).optional(),
 });
 
 const aiTransactionSchema = z.object({
@@ -16,6 +26,10 @@ const aiTransactionSchema = z.object({
     category: z.string().trim().min(1).max(60),
     note: z.string().trim().max(240).optional().default(""),
     date: z.string().trim().optional(),
+});
+
+const aiTransactionListSchema = z.object({
+    transactions: z.array(aiTransactionSchema).min(1).max(8),
 });
 
 function parseAiJson(text: string) {
@@ -42,20 +56,67 @@ export async function POST(req: Request) {
         const today = new Date().toISOString().slice(0, 10);
         const timezone = body.data.timezone ?? "Australia/Sydney";
 
+        const profile = await requireLatestBudgetProfile();
+
+        if (body.data.confirm && body.data.transactions?.length) {
+            const validated = body.data.transactions
+                .map((item) =>
+                    transactionCreateSchema.safeParse({
+                        date: item.date || today,
+                        amount: item.amount,
+                        type: item.type,
+                        category: item.category,
+                        note: item.note || "",
+                    })
+                );
+
+            if (validated.some((item) => !item.success)) {
+                return NextResponse.json(
+                    { error: "One or more transactions are invalid." },
+                    { status: 400 }
+                );
+            }
+
+            const txData = validated
+                .filter((item): item is Extract<typeof item, { success: true }> => item.success)
+                .map((item) => ({
+                    budgetProfileId: profile.id,
+                    date: new Date(item.data.date),
+                    amount: item.data.amount,
+                    type: item.data.type,
+                    category: item.data.category,
+                    note: item.data.note || null,
+                }));
+
+            await prisma.transaction.createMany({
+                data: txData,
+            });
+
+            return NextResponse.json({
+                createdCount: txData.length,
+                transactions: txData,
+            });
+        }
+
         const aiResponse = await openai.responses.create({
             model: "gpt-5.4",
             instructions: `
-You convert a budgeting voice/text statement into ONE transaction object.
-Return ONLY a JSON object with:
+You convert a budgeting voice/text statement into one or more transaction objects.
+Return ONLY JSON in this shape:
 {
-  "amount": number,
-  "type": "income" | "expense",
-  "category": string,
-  "note": string,
-  "date": "YYYY-MM-DD"
+  "transactions": [
+    {
+      "amount": number,
+      "type": "income" | "expense",
+      "category": string,
+      "note": string,
+      "date": "YYYY-MM-DD"
+    }
+  ]
 }
 
 Rules:
+- Split into multiple transactions when input clearly includes more than one purchase/income.
 - If the user says "spent", "paid", "bought", it is "expense".
 - If the user says "earned", "got paid", "received", it is "income".
 - Keep amount positive.
@@ -71,49 +132,28 @@ Rules:
         });
 
         const rawParsed = parseAiJson(aiResponse.output_text || "{}");
-        const parsed = aiTransactionSchema.safeParse(rawParsed);
+        const parsed = aiTransactionListSchema.safeParse(rawParsed);
 
         if (!parsed.success) {
             return NextResponse.json(
                 {
-                    error: "Could not understand that transaction. Try a clearer sentence.",
+                    error: "Could not understand that transaction request. Try a clearer sentence.",
                 },
                 { status: 400 }
             );
         }
 
-        const transactionInput = transactionCreateSchema.safeParse({
-            date: parsed.data.date || today,
-            amount: parsed.data.amount,
-            type: parsed.data.type,
-            category: parsed.data.category,
-            note: parsed.data.note,
-        });
-
-        if (!transactionInput.success) {
-            return NextResponse.json(
-                {
-                    error: "AI output was invalid for transaction creation.",
-                },
-                { status: 400 }
-            );
-        }
-
-        const profile = await requireLatestBudgetProfile();
-        const transaction = await prisma.transaction.create({
-            data: {
-                budgetProfileId: profile.id,
-                date: new Date(transactionInput.data.date),
-                amount: transactionInput.data.amount,
-                type: transactionInput.data.type,
-                category: transactionInput.data.category,
-                note: transactionInput.data.note || null,
-            },
-        });
+        const normalized = parsed.data.transactions.map((item) => ({
+            amount: Number(item.amount),
+            type: item.type,
+            category: item.category,
+            note: item.note || "",
+            date: item.date || today,
+        }));
 
         return NextResponse.json({
-            transaction,
-            parsed: transactionInput.data,
+            requiresConfirmation: true,
+            transactions: normalized,
         });
     } catch (error) {
         console.error("AI TRANSACTION ROUTE ERROR:", error);

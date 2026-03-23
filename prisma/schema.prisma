@@ -20,6 +20,9 @@ model BudgetProfile {
 
   transactions      Transaction[]
   chartConfigs      ChartConfig[]
+  categoryLimits    CategoryLimit[]
+  recurringRules    RecurringTransaction[]
+  monthlySnapshots  MonthlySnapshot[]
 
   @@index([createdAt])
 }
@@ -54,4 +57,63 @@ model ChartConfig {
   budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
 
   @@index([budgetProfileId, createdAt])
+}
+
+model CategoryLimit {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  budgetProfileId String
+  category        String
+  monthlyLimit    Float
+
+  budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetProfileId, category])
+  @@index([budgetProfileId, category])
+}
+
+model RecurringTransaction {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  budgetProfileId String
+  name            String
+  amount          Float
+  type            String
+  category        String
+  note            String?
+  cadence         String
+  dayOfMonth      Int?
+  weekday         Int?
+  nextRunDate     DateTime
+  isActive        Boolean  @default(true)
+  lastAppliedAt   DateTime?
+
+  budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+
+  @@index([budgetProfileId, nextRunDate])
+  @@index([budgetProfileId, isActive, nextRunDate])
+}
+
+model MonthlySnapshot {
+  id                    String   @id @default(cuid())
+  createdAt             DateTime @default(now())
+
+  budgetProfileId       String
+  monthKey              String
+  totalIncome           Float
+  totalExpenses         Float
+  remainingThisMonth    Float
+  projectedEndOfMonth   Float
+  safeToSpendToday      Float
+  budgetUsedPercentage  Float
+  savingsGap            Float
+
+  budgetProfile         BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)
+
+  @@unique([budgetProfileId, monthKey])
+  @@index([budgetProfileId, monthKey])
 }

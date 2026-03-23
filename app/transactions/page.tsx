@@ -19,6 +19,14 @@ type FormState = {
     note: string;
 };
 
+type AiDraftTransaction = {
+    amount: number;
+    type: "income" | "expense";
+    category: string;
+    note?: string;
+    date: string;
+};
+
 type SpeechRecognitionEvent = Event & {
     results: SpeechRecognitionResultList;
 };
@@ -109,6 +117,7 @@ export default function TransactionsPage() {
     const [aiError, setAiError] = useState("");
     const [aiSuccess, setAiSuccess] = useState("");
     const [aiInput, setAiInput] = useState("");
+    const [aiDraftTransactions, setAiDraftTransactions] = useState<AiDraftTransaction[]>([]);
     const [isListening, setIsListening] = useState(false);
     const [voiceSupported, setVoiceSupported] = useState(false);
     const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
@@ -251,6 +260,7 @@ export default function TransactionsPage() {
                 category: "Groceries",
                 note: "",
             });
+            sessionStorage.removeItem("dashboard_cache_v2");
 
             await loadTransactions();
         } catch (err) {
@@ -314,13 +324,57 @@ export default function TransactionsPage() {
                 throw new Error(json?.error || "Failed to create AI transaction");
             }
 
-            setAiSuccess("AI transaction added.");
-            setSuccess("Transaction added successfully.");
-            setAiInput("");
-            await loadTransactions();
+            const drafts = (json.transactions ?? []) as AiDraftTransaction[];
+
+            if (!drafts.length) {
+                throw new Error("AI did not return any transactions");
+            }
+
+            setAiDraftTransactions(drafts);
+            setAiSuccess(`AI parsed ${drafts.length} transaction${drafts.length > 1 ? "s" : ""}. Confirm to save.`);
         } catch (err) {
             console.error(err);
             setAiError("Could not create a transaction from that request.");
+        } finally {
+            setAiSubmitting(false);
+        }
+    }
+
+    async function handleConfirmAiTransactions() {
+        if (!aiDraftTransactions.length) return;
+
+        setAiSubmitting(true);
+        setAiError("");
+        setAiSuccess("");
+
+        try {
+            const res = await fetch("/api/ai/transactions", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    input: aiInput.trim() || "confirmed",
+                    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+                    confirm: true,
+                    transactions: aiDraftTransactions,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json?.error || "Failed to save AI transactions");
+            }
+
+            setAiSuccess(`Saved ${json.createdCount ?? aiDraftTransactions.length} transaction(s).`);
+            setSuccess("Transaction added successfully.");
+            setAiInput("");
+            setAiDraftTransactions([]);
+            sessionStorage.removeItem("dashboard_cache_v2");
+            await loadTransactions();
+        } catch (err) {
+            console.error(err);
+            setAiError("Could not save AI transactions.");
         } finally {
             setAiSubmitting(false);
         }
@@ -449,6 +503,42 @@ export default function TransactionsPage() {
                             {aiSuccess ? (
                                 <div className="mt-3 rounded-2xl border border-emerald-700/50 bg-emerald-950/20 px-4 py-3 text-sm text-emerald-200">
                                     {aiSuccess}
+                                </div>
+                            ) : null}
+
+                            {aiDraftTransactions.length ? (
+                                <div className="mt-3 rounded-2xl border border-red-900/40 bg-black/20 p-4">
+                                    <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300/70">
+                                        AI Draft
+                                    </p>
+                                    <div className="mt-3 space-y-2">
+                                        {aiDraftTransactions.map((tx, index) => (
+                                            <div
+                                                key={`${tx.category}-${tx.amount}-${index}`}
+                                                className="rounded-xl border border-red-900/40 bg-black/25 px-3 py-2 text-xs text-red-50/85"
+                                            >
+                                                {tx.type} {formatCurrency(Number(tx.amount))} in {tx.category} ({new Date(tx.date).toLocaleDateString("en-AU")})
+                                            </div>
+                                        ))}
+                                    </div>
+                                    <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                        <button
+                                            type="button"
+                                            onClick={() => void handleConfirmAiTransactions()}
+                                            disabled={aiSubmitting}
+                                            className="rounded-2xl bg-gradient-to-r from-emerald-700 to-emerald-600 px-4 py-2 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            {aiSubmitting ? "Saving..." : "Confirm & Save"}
+                                        </button>
+                                        <button
+                                            type="button"
+                                            onClick={() => setAiDraftTransactions([])}
+                                            disabled={aiSubmitting}
+                                            className="rounded-2xl border border-red-900/50 bg-black/20 px-4 py-2 text-sm text-red-100/80 disabled:cursor-not-allowed disabled:opacity-60"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
                                 </div>
                             ) : null}
                         </div>

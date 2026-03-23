@@ -42,6 +42,13 @@ type Metrics = {
     totalExpenses: number;
     margin: number;
     savingsGap: number;
+    remainingThisMonth: number;
+    budgetUsedPercentage: number;
+    projectedEndOfMonth: number;
+    monthlyBurnRate: number;
+    safeToSpendToday: number;
+    daysRemaining: number;
+    monthlyStatus: "on_track" | "at_risk" | "critical";
 };
 
 type DashboardResponse = {
@@ -53,6 +60,22 @@ type DashboardResponse = {
             value: number;
         }>;
     };
+    categoryProgress?: Array<{
+        category: string;
+        budget: number;
+        actual: number;
+        usedPercentage: number;
+        variance: number;
+        status: "under" | "near" | "over";
+    }>;
+    upcomingBills?: Array<{
+        id: string;
+        name: string;
+        amount: number;
+        category: string;
+        nextRunDate: string;
+        cadence: string;
+    }>;
 };
 
 const PIE_COLORS = ["#ef4444", "#f97316", "#8b5cf6", "#06b6d4", "#10b981", "#f59e0b"];
@@ -119,6 +142,18 @@ function getHealthAccent(score: number) {
     if (score >= 50) return "text-amber-300";
     if (score >= 35) return "text-orange-300";
     return "text-red-300";
+}
+
+function getMonthlyStatusLabel(status: "on_track" | "at_risk" | "critical") {
+    if (status === "on_track") return "On Track";
+    if (status === "at_risk") return "At Risk";
+    return "Critical";
+}
+
+function getMonthlyStatusClass(status: "on_track" | "at_risk" | "critical") {
+    if (status === "on_track") return "border-emerald-400/25 bg-emerald-400/10 text-emerald-300";
+    if (status === "at_risk") return "border-amber-400/25 bg-amber-400/10 text-amber-300";
+    return "border-red-400/25 bg-red-400/10 text-red-300";
 }
 
 function surfaceClass() {
@@ -234,7 +269,7 @@ export default function DashboardPage() {
     useEffect(() => {
         async function loadDashboard() {
             try {
-                const cached = sessionStorage.getItem("dashboard_cache_v1");
+                const cached = sessionStorage.getItem("dashboard_cache_v2");
                 if (cached) {
                     const parsed = JSON.parse(cached) as DashboardResponse;
                     setData(parsed);
@@ -256,7 +291,7 @@ export default function DashboardPage() {
                 }
 
                 setData(json);
-                sessionStorage.setItem("dashboard_cache_v1", JSON.stringify(json));
+                sessionStorage.setItem("dashboard_cache_v2", JSON.stringify(json));
             } catch (err) {
                 console.error(err);
                 setError("Could not load dashboard data.");
@@ -319,6 +354,26 @@ export default function DashboardPage() {
         if (!data) return [];
 
         const total = data.metrics.totalIncome || 1;
+        const fromTransactions = (data.transactionMetrics?.byCategory ?? [])
+            .slice(0, 4)
+            .map((item) => ({
+                label: item.name,
+                value: item.value,
+                percentage: Math.round((item.value / total) * 100),
+                color: "bg-red-500",
+            }));
+
+        if (fromTransactions.length) {
+            return [
+                ...fromTransactions,
+                {
+                    label: "Remaining",
+                    value: Math.max(data.metrics.remainingThisMonth, 0),
+                    percentage: Math.round((Math.max(data.metrics.remainingThisMonth, 0) / total) * 100),
+                    color: "bg-emerald-500",
+                },
+            ];
+        }
 
         return [
             {
@@ -354,6 +409,9 @@ export default function DashboardPage() {
         if (!spendingByCategory.length) return null;
         return spendingByCategory[0];
     }, [spendingByCategory]);
+
+    const categoryProgress = useMemo(() => data?.categoryProgress ?? [], [data]);
+    const upcomingBills = useMemo(() => data?.upcomingBills ?? [], [data]);
 
     const recommendations = useMemo(() => {
         if (!data) return [];
@@ -512,9 +570,6 @@ export default function DashboardPage() {
         profile.savingsGoal
     );
 
-    const goalTone =
-        metrics.savingsGap >= 0 ? "purple" : "red";
-
     return (
         <main className="relative min-h-screen overflow-hidden bg-gradient-to-br from-black via-[#120304] to-[#2a0608] px-4 py-8 text-white sm:px-6 sm:py-10">
             <div className="absolute inset-0">
@@ -535,6 +590,40 @@ export default function DashboardPage() {
                         to help you understand what is happening and what to do next.
                     </p>
                 </div>
+
+                <section className="mb-6">
+                    <Panel className="p-5 sm:p-6">
+                        <div className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-red-300/60">
+                                    Safe To Spend
+                                </p>
+                                <p className="mt-2 text-3xl font-bold text-emerald-300 sm:text-4xl">
+                                    {formatCurrency(metrics.safeToSpendToday)}
+                                    <span className="ml-2 text-base font-medium text-red-100/70">today</span>
+                                </p>
+                                <p className="mt-2 text-sm text-red-100/70">
+                                    {formatCurrency(metrics.remainingThisMonth)} left this month with{" "}
+                                    {metrics.daysRemaining} day{metrics.daysRemaining === 1 ? "" : "s"} remaining.
+                                </p>
+                            </div>
+
+                            <div className="grid gap-3 sm:min-w-[280px]">
+                                <div className={`inline-flex rounded-full border px-3 py-1.5 text-xs font-semibold uppercase tracking-[0.14em] ${getMonthlyStatusClass(metrics.monthlyStatus)}`}>
+                                    {getMonthlyStatusLabel(metrics.monthlyStatus)}
+                                </div>
+                                <div className="rounded-2xl border border-red-900/40 bg-black/20 p-3">
+                                    <p className="text-xs uppercase tracking-[0.18em] text-red-200/55">
+                                        Projected End Of Month Expenses
+                                    </p>
+                                    <p className="mt-1 text-lg font-semibold text-white">
+                                        {formatCurrency(metrics.projectedEndOfMonth)}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    </Panel>
+                </section>
 
                 <section className="grid gap-6 xl:grid-cols-3">
                     <Panel className="p-5 sm:p-6 xl:col-span-2">
@@ -663,16 +752,16 @@ export default function DashboardPage() {
                         tone="amber"
                     />
                     <SummaryCard
-                        label="Savings Goal"
-                        value={formatCurrency(profile.savingsGoal)}
-                        helper="Target for this month"
-                        tone="default"
+                        label="Remaining"
+                        value={formatCurrency(metrics.remainingThisMonth)}
+                        helper="After savings target"
+                        tone={metrics.remainingThisMonth >= 0 ? "green" : "red"}
                     />
                     <SummaryCard
-                        label="Savings Gap"
-                        value={formatCurrency(metrics.savingsGap)}
-                        helper={metrics.savingsGap >= 0 ? "Ahead of target" : "Below target"}
-                        tone={goalTone}
+                        label="Budget Used"
+                        value={`${Math.round(metrics.budgetUsedPercentage)}%`}
+                        helper={`${formatCurrency(metrics.monthlyBurnRate)}/day burn`}
+                        tone={metrics.budgetUsedPercentage > 100 ? "red" : metrics.budgetUsedPercentage >= 85 ? "amber" : "purple"}
                     />
                 </section>
 
@@ -787,6 +876,63 @@ export default function DashboardPage() {
                                     </text>
                                 </RadialBarChart>
                             </ResponsiveContainer>
+                        </div>
+                    </Panel>
+                </section>
+
+                <section className="mt-6">
+                    <Panel className="p-5 sm:p-6">
+                        <SectionTitle
+                            title="Budget vs Actual"
+                            description="Category usage against monthly limits with over/under indicators."
+                        />
+
+                        <div className="mt-5 space-y-4">
+                            {categoryProgress.length ? (
+                                categoryProgress.map((item) => {
+                                    const toneClass =
+                                        item.status === "over"
+                                            ? "text-red-300"
+                                            : item.status === "near"
+                                                ? "text-amber-300"
+                                                : "text-emerald-300";
+
+                                    return (
+                                        <div key={item.category} className="rounded-2xl border border-red-900/40 bg-black/20 p-4">
+                                            <div className="mb-2 flex items-center justify-between gap-3">
+                                                <p className="text-sm font-medium text-white">{item.category}</p>
+                                                <p className={`text-sm font-semibold ${toneClass}`}>
+                                                    {Math.round(item.usedPercentage)}%
+                                                </p>
+                                            </div>
+                                            <div className="h-2.5 overflow-hidden rounded-full bg-white/10">
+                                                <div
+                                                    className={`h-full rounded-full ${item.status === "over"
+                                                        ? "bg-red-500"
+                                                        : item.status === "near"
+                                                            ? "bg-amber-500"
+                                                            : "bg-emerald-500"
+                                                        }`}
+                                                    style={{ width: `${clamp(item.usedPercentage, 0, 100)}%` }}
+                                                />
+                                            </div>
+                                            <div className="mt-2 flex items-center justify-between text-xs text-red-100/70">
+                                                <p>
+                                                    Actual {formatCurrency(item.actual)} / Budget {formatCurrency(item.budget)}
+                                                </p>
+                                                <p className={toneClass}>
+                                                    {item.variance >= 0 ? "+" : "-"}
+                                                    {formatCurrency(Math.abs(item.variance))}
+                                                </p>
+                                            </div>
+                                        </div>
+                                    );
+                                })
+                            ) : (
+                                <p className="text-sm text-red-100/65">
+                                    No category limits set yet. Add setup data to enable budget-vs-actual tracking.
+                                </p>
+                            )}
                         </div>
                     </Panel>
                 </section>
@@ -949,6 +1095,33 @@ export default function DashboardPage() {
                             title="Focus Areas"
                             description="The highest-value areas to review next."
                         />
+
+                        <div className="mt-5 rounded-2xl border border-red-900/40 bg-black/20 p-4">
+                            <p className="text-xs font-semibold uppercase tracking-[0.2em] text-red-300/70">
+                                Upcoming Bills
+                            </p>
+                            {upcomingBills.length ? (
+                                <div className="mt-3 space-y-2">
+                                    {upcomingBills.slice(0, 5).map((bill) => (
+                                        <div key={bill.id} className="flex items-center justify-between gap-3 text-sm">
+                                            <div>
+                                                <p className="text-white">{bill.name}</p>
+                                                <p className="text-xs text-red-100/60">
+                                                    {bill.category} • {new Date(bill.nextRunDate).toLocaleDateString("en-AU")} • {bill.cadence.toLowerCase()}
+                                                </p>
+                                            </div>
+                                            <p className="font-semibold text-red-50">
+                                                {formatCurrency(bill.amount)}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="mt-3 text-sm text-red-100/65">
+                                    No upcoming recurring expenses found.
+                                </p>
+                            )}
+                        </div>
 
                         <div className="mt-5 space-y-3">
                             {recommendations.map((item, index) => (

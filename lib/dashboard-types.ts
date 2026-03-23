@@ -23,6 +23,13 @@ export type Metrics = {
     totalExpenses: number;
     margin: number;
     savingsGap: number;
+    remainingThisMonth: number;
+    budgetUsedPercentage: number;
+    projectedEndOfMonth: number;
+    monthlyBurnRate: number;
+    safeToSpendToday: number;
+    daysRemaining: number;
+    monthlyStatus: "on_track" | "at_risk" | "critical";
 };
 
 export type TransactionMetrics = {
@@ -41,4 +48,20 @@ export type DashboardData = {
     profile: BudgetProfileRecord;
     metrics: Metrics;
     transactionMetrics: TransactionMetrics;
+    categoryProgress: Array<{
+        category: string;
+        budget: number;
+        actual: number;
+        usedPercentage: number;
+        variance: number;
+        status: "under" | "near" | "over";
+    }>;
+    upcomingBills: Array<{
+        id: string;
+        name: string;
+        amount: number;
+        category: string;
+        nextRunDate: string;
+        cadence: string;
+    }>;
 };

@@ -4,6 +4,7 @@ import { getLatestBudgetDashboard } from "@/lib/dashboard-data";
 import { budgetProfileSchema, formatZodError } from "@/lib/transactions";
 
 const AUTO_SETUP_NOTE = "Auto setup baseline";
+const DEFAULT_RECURRING_NOTE = "Auto recurring baseline";
 
 function getSetupTransactions(
     budgetProfileId: string,
@@ -61,6 +62,67 @@ function getSetupTransactions(
     ].filter((transaction) => transaction.amount > 0);
 }
 
+function getDefaultCategoryLimits(data: {
+    fixedExpenses: number;
+    variableExpenses: number;
+    debtRepayments: number;
+}) {
+    const variable = data.variableExpenses;
+
+    return [
+        { category: "Rent", monthlyLimit: data.fixedExpenses * 0.65 },
+        { category: "Bills", monthlyLimit: data.fixedExpenses * 0.35 },
+        { category: "Debt", monthlyLimit: data.debtRepayments },
+        { category: "Groceries", monthlyLimit: variable * 0.35 },
+        { category: "Transport", monthlyLimit: variable * 0.15 },
+        { category: "Takeaway", monthlyLimit: variable * 0.15 },
+        { category: "Entertainment", monthlyLimit: variable * 0.12 },
+        { category: "Shopping", monthlyLimit: variable * 0.15 },
+        { category: "Health", monthlyLimit: variable * 0.08 },
+    ].filter((item) => item.monthlyLimit > 0);
+}
+
+function getDefaultRecurringRules(
+    budgetProfileId: string,
+    data: {
+        fixedExpenses: number;
+        debtRepayments: number;
+    }
+) {
+    const today = new Date();
+    const dayOfMonth = Math.max(1, Math.min(today.getDate(), 28));
+    const nextRunDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), dayOfMonth));
+
+    return [
+        {
+            budgetProfileId,
+            name: "Rent + Bills",
+            amount: data.fixedExpenses,
+            type: "expense",
+            category: "Rent",
+            note: DEFAULT_RECURRING_NOTE,
+            cadence: "MONTHLY",
+            dayOfMonth,
+            weekday: null,
+            nextRunDate,
+            isActive: true,
+        },
+        {
+            budgetProfileId,
+            name: "Debt repayment",
+            amount: data.debtRepayments,
+            type: "expense",
+            category: "Debt",
+            note: DEFAULT_RECURRING_NOTE,
+            cadence: "MONTHLY",
+            dayOfMonth,
+            weekday: null,
+            nextRunDate,
+            isActive: true,
+        },
+    ].filter((item) => item.amount > 0);
+}
+
 export async function POST(req: Request) {
     try {
         const parsed = budgetProfileSchema.safeParse(await req.json());
@@ -79,10 +141,28 @@ export async function POST(req: Request) {
             profile.id,
             parsed.data
         );
+        const categoryLimits = getDefaultCategoryLimits(parsed.data);
+        const recurringRules = getDefaultRecurringRules(profile.id, parsed.data);
 
         if (setupTransactions.length) {
             await prisma.transaction.createMany({
                 data: setupTransactions,
+            });
+        }
+
+        if (categoryLimits.length) {
+            await prisma.categoryLimit.createMany({
+                data: categoryLimits.map((limit) => ({
+                    budgetProfileId: profile.id,
+                    category: limit.category,
+                    monthlyLimit: limit.monthlyLimit,
+                })),
+            });
+        }
+
+        if (recurringRules.length) {
+            await prisma.recurringTransaction.createMany({
+                data: recurringRules,
             });
         }
 
@@ -120,6 +200,8 @@ export async function PUT(req: Request) {
         }
 
         const setupTransactions = getSetupTransactions(profile.id, parsed.data);
+        const categoryLimits = getDefaultCategoryLimits(parsed.data);
+        const recurringRules = getDefaultRecurringRules(profile.id, parsed.data);
 
         await prisma.$transaction([
             prisma.budgetProfile.update({
@@ -132,6 +214,35 @@ export async function PUT(req: Request) {
                     note: AUTO_SETUP_NOTE,
                 },
             }),
+            prisma.categoryLimit.deleteMany({
+                where: {
+                    budgetProfileId: profile.id,
+                },
+            }),
+            ...(categoryLimits.length
+                ? [
+                    prisma.categoryLimit.createMany({
+                        data: categoryLimits.map((limit) => ({
+                            budgetProfileId: profile.id,
+                            category: limit.category,
+                            monthlyLimit: limit.monthlyLimit,
+                        })),
+                    }),
+                ]
+                : []),
+            prisma.recurringTransaction.deleteMany({
+                where: {
+                    budgetProfileId: profile.id,
+                    note: DEFAULT_RECURRING_NOTE,
+                },
+            }),
+            ...(recurringRules.length
+                ? [
+                    prisma.recurringTransaction.createMany({
+                        data: recurringRules,
+                    }),
+                ]
+                : []),
             ...(setupTransactions.length
                 ? [
                     prisma.transaction.createMany({
