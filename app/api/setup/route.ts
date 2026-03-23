@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
-import { getLatestBudgetDashboard } from "@/lib/dashboard-data";
+import { getLatestBudgetDashboardForUser } from "@/lib/dashboard-data";
 import { budgetProfileSchema, formatZodError } from "@/lib/transactions";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 const AUTO_SETUP_NOTE = "Auto setup baseline";
 const DEFAULT_RECURRING_NOTE = "Auto recurring baseline";
@@ -125,6 +126,11 @@ function getDefaultRecurringRules(
 
 export async function POST(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const parsed = budgetProfileSchema.safeParse(await req.json());
         if (!parsed.success) {
             return NextResponse.json(
@@ -134,7 +140,10 @@ export async function POST(req: Request) {
         }
 
         const profile = await prisma.budgetProfile.create({
-            data: parsed.data,
+            data: {
+                ...parsed.data,
+                userId: user.id,
+            },
         });
 
         const setupTransactions = getSetupTransactions(
@@ -166,7 +175,7 @@ export async function POST(req: Request) {
             });
         }
 
-        const dashboard = await getLatestBudgetDashboard();
+        const dashboard = await getLatestBudgetDashboardForUser(user.id);
         return NextResponse.json(dashboard ?? profile);
     } catch (error) {
         console.error("SETUP ROUTE ERROR:", error);
@@ -183,6 +192,11 @@ export async function POST(req: Request) {
 
 export async function PUT(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const parsed = budgetProfileSchema.safeParse(await req.json());
         if (!parsed.success) {
             return NextResponse.json(
@@ -192,6 +206,7 @@ export async function PUT(req: Request) {
         }
 
         const profile = await prisma.budgetProfile.findFirst({
+            where: { userId: user.id },
             orderBy: { createdAt: "desc" },
         });
 
@@ -252,7 +267,7 @@ export async function PUT(req: Request) {
                 : []),
         ]);
 
-        const dashboard = await getLatestBudgetDashboard();
+        const dashboard = await getLatestBudgetDashboardForUser(user.id);
         return NextResponse.json(dashboard);
     } catch (error) {
         console.error("SETUP UPDATE ROUTE ERROR:", error);

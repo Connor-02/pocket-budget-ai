@@ -1,9 +1,16 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
-export async function GET() {
+export async function GET(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const profile = await prisma.budgetProfile.findFirst({
+            where: { userId: user.id },
             orderBy: { createdAt: "desc" },
         });
 
@@ -35,9 +42,15 @@ export async function GET() {
 
 export async function POST(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const body = await req.json();
 
         const profile = await prisma.budgetProfile.findFirst({
+            where: { userId: user.id },
             orderBy: { createdAt: "desc" },
         });
 

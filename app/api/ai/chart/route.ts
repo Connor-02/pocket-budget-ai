@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { openai } from "@/lib/openai";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 export async function POST(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const { prompt, dashboardContext } = await req.json();
 
         const response = await openai.responses.create({

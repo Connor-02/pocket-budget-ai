@@ -11,6 +11,7 @@ model BudgetProfile {
   createdAt         DateTime @default(now())
   updatedAt         DateTime @updatedAt
 
+  userId            String?
   monthlyIncome     Float
   recurringIncome   Float
   savingsGoal       Float
@@ -18,13 +19,14 @@ model BudgetProfile {
   variableExpenses  Float
   debtRepayments    Float
 
+  user              User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
   transactions      Transaction[]
   chartConfigs      ChartConfig[]
   categoryLimits    CategoryLimit[]
   recurringRules    RecurringTransaction[]
   monthlySnapshots  MonthlySnapshot[]
 
-  @@index([createdAt])
+  @@index([userId, createdAt])
 }
 
 model Transaction {
@@ -116,4 +118,29 @@ model MonthlySnapshot {
 
   @@unique([budgetProfileId, monthKey])
   @@index([budgetProfileId, monthKey])
+}
+
+model User {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  email           String   @unique
+  passwordHash    String
+  displayName     String?
+
+  sessions        Session[]
+  budgetProfiles  BudgetProfile[]
+}
+
+model Session {
+  id              String   @id @default(cuid())
+  createdAt       DateTime @default(now())
+  expiresAt       DateTime
+  tokenHash       String   @unique
+
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, expiresAt])
 }

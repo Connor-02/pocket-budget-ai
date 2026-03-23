@@ -5,6 +5,18 @@ import { usePathname } from "next/navigation";
 
 export default function Navbar() {
     const pathname = usePathname();
+    const isPublicRoute = pathname === "/" || pathname.startsWith("/auth");
+
+    async function handleSignOut() {
+        await fetch("/api/auth/signout", {
+            method: "POST",
+        });
+        window.location.href = "/auth";
+    }
+
+    if (isPublicRoute) {
+        return null;
+    }
 
     const navItems = [
         { href: "/dashboard", label: "Dashboard", short: "DB" },
@@ -40,7 +52,8 @@ export default function Navbar() {
                     </div>
                 </Link>
 
-                <div className="rounded-2xl border border-red-900/70 bg-black/30 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
+                <div className="flex items-center gap-2">
+                    <div className="rounded-2xl border border-red-900/70 bg-black/30 p-1.5 shadow-[inset_0_1px_0_rgba(255,255,255,0.05)]">
                     <p className="px-2 pb-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-red-300/55 sm:hidden">
                         Navigation
                     </p>
@@ -63,6 +76,15 @@ export default function Navbar() {
                             );
                         })}
                     </div>
+                    </div>
+
+                    <button
+                        type="button"
+                        onClick={() => void handleSignOut()}
+                        className="rounded-xl border border-red-900/60 bg-black/25 px-3 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-red-100/80 transition hover:bg-black/35"
+                    >
+                        Sign Out
+                    </button>
                 </div>
             </nav>
         </header>

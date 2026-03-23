@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/prisma";
-import { requireLatestBudgetProfile } from "@/lib/dashboard-data";
+import { requireLatestBudgetProfileForUser } from "@/lib/dashboard-data";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 const recurringSchema = z.object({
   name: z.string().trim().min(1).max(80),
@@ -15,9 +16,14 @@ const recurringSchema = z.object({
   weekday: z.coerce.number().int().min(0).max(6).optional(),
 });
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
-    const profile = await requireLatestBudgetProfile();
+    const user = await getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
+    const profile = await requireLatestBudgetProfileForUser(user.id);
     const recurring = await prisma.recurringTransaction.findMany({
       where: { budgetProfileId: profile.id },
       orderBy: [{ nextRunDate: "asc" }, { amount: "desc" }],
@@ -32,12 +38,17 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
+    const user = await getAuthenticatedUserFromRequest(req);
+    if (!user) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    }
+
     const parsed = recurringSchema.safeParse(await req.json());
     if (!parsed.success) {
       return NextResponse.json({ error: parsed.error.issues.map((i) => i.message).join(", ") }, { status: 400 });
     }
 
-    const profile = await requireLatestBudgetProfile();
+    const profile = await requireLatestBudgetProfileForUser(user.id);
 
     const created = await prisma.recurringTransaction.create({
       data: {

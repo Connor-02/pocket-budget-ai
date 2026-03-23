@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 type Params = {
     params: Promise<{
@@ -9,10 +10,20 @@ type Params = {
 
 export async function DELETE(_: Request, { params }: Params) {
     try {
+        const user = await getAuthenticatedUserFromRequest(_);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const { id } = await params;
 
-        await prisma.transaction.delete({
-            where: { id },
+        await prisma.transaction.deleteMany({
+            where: {
+                id,
+                budgetProfile: {
+                    userId: user.id,
+                },
+            },
         });
 
         return NextResponse.json({ success: true });

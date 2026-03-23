@@ -2,8 +2,9 @@ import { NextResponse } from "next/server";
 import { z } from "zod";
 import { openai } from "@/lib/openai";
 import { prisma } from "@/lib/prisma";
-import { requireLatestBudgetProfile } from "@/lib/dashboard-data";
+import { requireLatestBudgetProfileForUser } from "@/lib/dashboard-data";
 import { transactionCreateSchema } from "@/lib/transactions";
+import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 const requestSchema = z.object({
     input: z.string().trim().min(1).max(500),
@@ -45,6 +46,11 @@ function parseAiJson(text: string) {
 
 export async function POST(req: Request) {
     try {
+        const user = await getAuthenticatedUserFromRequest(req);
+        if (!user) {
+            return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+        }
+
         const body = requestSchema.safeParse(await req.json());
         if (!body.success) {
             return NextResponse.json(
@@ -56,7 +62,7 @@ export async function POST(req: Request) {
         const today = new Date().toISOString().slice(0, 10);
         const timezone = body.data.timezone ?? "Australia/Sydney";
 
-        const profile = await requireLatestBudgetProfile();
+        const profile = await requireLatestBudgetProfileForUser(user.id);
 
         if (body.data.confirm && body.data.transactions?.length) {
             const validated = body.data.transactions

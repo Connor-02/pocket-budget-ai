@@ -7,8 +7,9 @@ import {
     getUpcomingBills,
 } from "@/lib/recurring-transactions";
 
-export async function getLatestBudgetDashboard(): Promise<DashboardData | null> {
+export async function getLatestBudgetDashboardForUser(userId: string): Promise<DashboardData | null> {
     const profile = await prisma.budgetProfile.findFirst({
+        where: { userId },
         orderBy: { createdAt: "desc" },
         select: {
             id: true,
@@ -210,8 +211,9 @@ export async function getLatestBudgetDashboard(): Promise<DashboardData | null> 
     };
 }
 
-export async function requireLatestBudgetProfile() {
+export async function requireLatestBudgetProfileForUser(userId: string) {
     const profile = await prisma.budgetProfile.findFirst({
+        where: { userId },
         orderBy: { createdAt: "desc" },
     });
 
