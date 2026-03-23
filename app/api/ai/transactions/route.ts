@@ -91,6 +91,7 @@ export async function POST(req: Request) {
                     amount: item.data.amount,
                     type: item.data.type,
                     category: item.data.category,
+                    title: item.data.note || `${item.data.type} - ${item.data.category}`,
                     note: item.data.note || null,
                 }));
 

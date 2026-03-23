@@ -38,6 +38,7 @@ model Transaction {
   amount          Float
   type            String
   category        String
+  title           String?
   note            String?
 
   budgetProfile   BudgetProfile @relation(fields: [budgetProfileId], references: [id], onDelete: Cascade)

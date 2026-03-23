@@ -68,6 +68,7 @@ export async function POST(req: Request) {
                 amount: Number(body.amount),
                 type: body.type,
                 category: body.category,
+                title: body.title?.trim() || null,
                 note: body.note || null,
             },
         });

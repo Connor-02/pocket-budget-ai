@@ -8,6 +8,7 @@ type Transaction = {
     amount: number;
     type: string;
     category: string;
+    title?: string | null;
     note?: string | null;
 };
 
@@ -121,6 +122,14 @@ export default function TransactionsPage() {
     const [isListening, setIsListening] = useState(false);
     const [voiceSupported, setVoiceSupported] = useState(false);
     const recognitionRef = useRef<SpeechRecognitionInstance | null>(null);
+    const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+    const [editForm, setEditForm] = useState({
+        title: "",
+        date: "",
+        category: "",
+        amount: "",
+        note: "",
+    });
 
     const [form, setForm] = useState<FormState>({
         date: new Date().toISOString().slice(0, 10),
@@ -242,6 +251,7 @@ export default function TransactionsPage() {
                     amount: Number(form.amount),
                     type: form.type,
                     category: form.category,
+                    title: form.note.trim() || null,
                     note: form.note.trim() || null,
                 }),
             });
@@ -266,6 +276,83 @@ export default function TransactionsPage() {
         } catch (err) {
             console.error(err);
             setError("Something went wrong while saving the transaction.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    function openTransactionModal(transaction: Transaction) {
+        setSelectedTransaction(transaction);
+        setEditForm({
+            title: transaction.title?.trim() || transaction.note?.trim() || transaction.type,
+            date: new Date(transaction.date).toISOString().slice(0, 10),
+            category: transaction.category,
+            amount: String(transaction.amount),
+            note: transaction.note?.trim() || "",
+        });
+    }
+
+    async function handleUpdateTransaction() {
+        if (!selectedTransaction) return;
+
+        setSubmitting(true);
+        setError("");
+
+        try {
+            const res = await fetch(`/api/transactions/${selectedTransaction.id}`, {
+                method: "PUT",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    title: editForm.title,
+                    date: editForm.date,
+                    category: editForm.category,
+                    amount: Number(editForm.amount),
+                    note: editForm.note,
+                }),
+            });
+
+            const json = await res.json();
+            if (!res.ok) {
+                throw new Error(json?.error || "Failed to update transaction");
+            }
+
+            setSuccess("Transaction updated successfully.");
+            setSelectedTransaction(null);
+            sessionStorage.removeItem("dashboard_cache_v2");
+            await loadTransactions();
+        } catch (err) {
+            console.error(err);
+            setError("Could not update transaction.");
+        } finally {
+            setSubmitting(false);
+        }
+    }
+
+    async function handleDeleteTransaction() {
+        if (!selectedTransaction) return;
+
+        setSubmitting(true);
+        setError("");
+
+        try {
+            const res = await fetch(`/api/transactions/${selectedTransaction.id}`, {
+                method: "DELETE",
+            });
+            const json = await res.json();
+
+            if (!res.ok) {
+                throw new Error(json?.error || "Failed to delete transaction");
+            }
+
+            setSuccess("Transaction deleted.");
+            setSelectedTransaction(null);
+            sessionStorage.removeItem("dashboard_cache_v2");
+            await loadTransactions();
+        } catch (err) {
+            console.error(err);
+            setError("Could not delete transaction.");
         } finally {
             setSubmitting(false);
         }
@@ -796,12 +883,26 @@ export default function TransactionsPage() {
                                                 <div
                                                     key={transaction.id}
                                                     className="rounded-2xl border border-red-900/40 bg-black/20 p-4"
+                                                    onClick={() => openTransactionModal(transaction)}
+                                                    onKeyDown={(e) => {
+                                                        if (e.key === "Enter" || e.key === " ") {
+                                                            e.preventDefault();
+                                                            openTransactionModal(transaction);
+                                                        }
+                                                    }}
+                                                    role="button"
+                                                    tabIndex={0}
                                                 >
                                                     <div className="flex items-start justify-between gap-3">
                                                         <div className="min-w-0">
                                                             <p className="truncate text-sm font-medium text-white">
-                                                                {transaction.note?.trim() || transaction.type}
+                                                                {transaction.title?.trim() || transaction.note?.trim() || transaction.type}
                                                             </p>
+                                                            {transaction.note?.trim() ? (
+                                                                <p className="mt-1 truncate text-xs text-red-100/60">
+                                                                    {transaction.note}
+                                                                </p>
+                                                            ) : null}
                                                             <p
                                                                 className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${isIncome
                                                                     ? "bg-emerald-500/10 text-emerald-300"
@@ -844,12 +945,26 @@ export default function TransactionsPage() {
                                                 return (
                                                     <div
                                                         key={transaction.id}
-                                                        className="grid grid-cols-[1.1fr_0.8fr_0.8fr_1fr] items-center px-4 py-4"
+                                                        className="grid cursor-pointer grid-cols-[1.1fr_0.8fr_0.8fr_1fr] items-center px-4 py-4 hover:bg-black/20"
+                                                        onClick={() => openTransactionModal(transaction)}
+                                                        onKeyDown={(e) => {
+                                                            if (e.key === "Enter" || e.key === " ") {
+                                                                e.preventDefault();
+                                                                openTransactionModal(transaction);
+                                                            }
+                                                        }}
+                                                        role="button"
+                                                        tabIndex={0}
                                                     >
                                                         <div className="min-w-0">
                                                             <p className="truncate text-sm font-medium text-white">
-                                                                {transaction.note?.trim() || transaction.type}
+                                                                {transaction.title?.trim() || transaction.note?.trim() || transaction.type}
                                                             </p>
+                                                            {transaction.note?.trim() ? (
+                                                                <p className="mt-1 truncate text-xs text-red-100/60">
+                                                                    {transaction.note}
+                                                                </p>
+                                                            ) : null}
                                                             <p
                                                                 className={`mt-1 inline-flex rounded-full px-2 py-0.5 text-xs ${isIncome
                                                                     ? "bg-emerald-500/10 text-emerald-300"
@@ -886,6 +1001,101 @@ export default function TransactionsPage() {
                     </div>
                 </section>
             </div>
+
+            {selectedTransaction ? (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 px-4">
+                    <div className="w-full max-w-lg rounded-3xl border border-red-900/50 bg-[#130405] p-5 text-white shadow-2xl sm:p-6">
+                        <div className="mb-4 flex items-center justify-between">
+                            <h3 className="text-xl font-semibold">Edit transaction</h3>
+                            <button
+                                type="button"
+                                onClick={() => setSelectedTransaction(null)}
+                                className="rounded-xl border border-red-900/50 px-3 py-1 text-xs text-red-100/70"
+                            >
+                                Close
+                            </button>
+                        </div>
+
+                        <div className="space-y-4">
+                            <div>
+                                <FieldLabel>Title</FieldLabel>
+                                <input
+                                    value={editForm.title}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, title: e.target.value }))}
+                                    className="w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white outline-none focus:border-red-500/70"
+                                />
+                            </div>
+                            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                <div>
+                                    <FieldLabel>Date</FieldLabel>
+                                    <input
+                                        type="date"
+                                        value={editForm.date}
+                                        onChange={(e) => setEditForm((prev) => ({ ...prev, date: e.target.value }))}
+                                        className="w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white outline-none focus:border-red-500/70"
+                                    />
+                                </div>
+                                <div>
+                                    <FieldLabel>Amount</FieldLabel>
+                                    <input
+                                        type="number"
+                                        inputMode="decimal"
+                                        step="0.01"
+                                        min="0"
+                                        value={editForm.amount}
+                                        onChange={(e) => setEditForm((prev) => ({ ...prev, amount: e.target.value }))}
+                                        className="w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white outline-none focus:border-red-500/70"
+                                    />
+                                </div>
+                            </div>
+                            <div>
+                                <FieldLabel>Category</FieldLabel>
+                                <input
+                                    value={editForm.category}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, category: e.target.value }))}
+                                    className="w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white outline-none focus:border-red-500/70"
+                                />
+                            </div>
+                            <div>
+                                <FieldLabel>Note</FieldLabel>
+                                <textarea
+                                    rows={3}
+                                    value={editForm.note}
+                                    onChange={(e) => setEditForm((prev) => ({ ...prev, note: e.target.value }))}
+                                    className="w-full rounded-2xl border border-red-900/50 bg-black/25 px-4 py-3 text-white outline-none focus:border-red-500/70"
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+                                <button
+                                    type="button"
+                                    onClick={() => void handleUpdateTransaction()}
+                                    disabled={submitting}
+                                    className="rounded-2xl bg-gradient-to-r from-red-800 via-red-700 to-red-900 px-4 py-2.5 text-sm font-semibold text-white disabled:opacity-60"
+                                >
+                                    Save
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => void handleDeleteTransaction()}
+                                    disabled={submitting}
+                                    className="rounded-2xl border border-red-800/60 bg-red-950/30 px-4 py-2.5 text-sm font-semibold text-red-200 disabled:opacity-60"
+                                >
+                                    Delete
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setSelectedTransaction(null)}
+                                    disabled={submitting}
+                                    className="rounded-2xl border border-red-900/50 bg-black/20 px-4 py-2.5 text-sm text-red-100/80 disabled:opacity-60"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            ) : null}
         </main>
     );
 }

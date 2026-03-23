@@ -46,6 +46,7 @@ export async function applyDueRecurringTransactions(budgetProfileId: string) {
           amount: item.amount,
           type: item.type,
           category: item.category,
+          title: item.name,
           note: item.note || `Recurring: ${item.name}`,
         },
       }),

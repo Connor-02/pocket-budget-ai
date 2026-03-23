@@ -6,6 +6,7 @@ import { getAuthenticatedUserFromRequest } from "@/lib/auth";
 
 const AUTO_SETUP_NOTE = "Auto setup baseline";
 const DEFAULT_RECURRING_NOTE = "Auto recurring baseline";
+const AUTO_SETUP_TITLE = "Auto setup baseline";
 
 function getSetupTransactions(
     budgetProfileId: string,
@@ -26,6 +27,7 @@ function getSetupTransactions(
             amount: data.monthlyIncome,
             type: "income",
             category: "Salary",
+            title: AUTO_SETUP_TITLE,
             note: AUTO_SETUP_NOTE,
         },
         {
@@ -34,6 +36,7 @@ function getSetupTransactions(
             amount: data.recurringIncome,
             type: "income",
             category: "Recurring Income",
+            title: AUTO_SETUP_TITLE,
             note: AUTO_SETUP_NOTE,
         },
         {
@@ -42,6 +45,7 @@ function getSetupTransactions(
             amount: data.fixedExpenses,
             type: "expense",
             category: "Fixed Expenses",
+            title: AUTO_SETUP_TITLE,
             note: AUTO_SETUP_NOTE,
         },
         {
@@ -50,6 +54,7 @@ function getSetupTransactions(
             amount: data.variableExpenses,
             type: "expense",
             category: "Variable Expenses",
+            title: AUTO_SETUP_TITLE,
             note: AUTO_SETUP_NOTE,
         },
         {
@@ -58,6 +63,7 @@ function getSetupTransactions(
             amount: data.debtRepayments,
             type: "expense",
             category: "Debt Repayments",
+            title: AUTO_SETUP_TITLE,
             note: AUTO_SETUP_NOTE,
         },
     ].filter((transaction) => transaction.amount > 0);
@@ -92,7 +98,8 @@ function getDefaultRecurringRules(
 ) {
     const today = new Date();
     const dayOfMonth = Math.max(1, Math.min(today.getDate(), 28));
-    const nextRunDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), dayOfMonth));
+    // Start from next month to avoid duplicating setup baseline in the same cycle.
+    const nextRunDate = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth() + 1, dayOfMonth));
 
     return [
         {
@@ -226,7 +233,9 @@ export async function PUT(req: Request) {
             prisma.transaction.deleteMany({
                 where: {
                     budgetProfileId: profile.id,
-                    note: AUTO_SETUP_NOTE,
+                    note: {
+                        in: [AUTO_SETUP_NOTE, DEFAULT_RECURRING_NOTE],
+                    },
                 },
             }),
             prisma.categoryLimit.deleteMany({

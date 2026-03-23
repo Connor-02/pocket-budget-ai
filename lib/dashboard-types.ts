@@ -4,6 +4,7 @@ export type TransactionRecord = {
     amount: number;
     type: string;
     category: string;
+    title?: string | null;
     note: string | null;
 };
 
